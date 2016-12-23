@@ -15,8 +15,6 @@ var _ = Describe("target command", func() {
 	)
 
 	BeforeEach(func() {
-		helpers.RunIfExperimental("remove after #133310639")
-
 		helpers.LoginCF()
 
 		orgName = helpers.NewOrgName()
@@ -60,11 +58,22 @@ var _ = Describe("target command", func() {
 				helpers.LogoutCF()
 			})
 
-			It("fails with not logged in message", func() {
-				session := helpers.CF("target", "-o", "some-org", "-s", "some-space")
-				Eventually(session.Out).Should(Say("FAILED"))
-				Eventually(session.Out).Should(Say("Not logged in. Use 'cf login' to log in."))
-				Eventually(session).Should(Exit(1))
+			Context("when trying to set the target", func() {
+				It("fails with not logged in message", func() {
+					session := helpers.CF("target", "-o", "some-org", "-s", "some-space")
+					Eventually(session.Out).Should(Say("FAILED"))
+					Eventually(session.Out).Should(Say("Not logged in. Use 'cf login' to log in."))
+					Eventually(session).Should(Exit(1))
+				})
+			})
+
+			Context("when trying to get the target", func() {
+				It("fails with not logged in message", func() {
+					session := helpers.CF("target")
+					Eventually(session.Out).Should(Say("Not logged in. Use 'cf login' to log in."))
+					Eventually(session.Out).Should(Say("FAILED"))
+					Eventually(session).Should(Exit(1))
+				})
 			})
 		})
 	})
@@ -121,7 +130,7 @@ var _ = Describe("target command", func() {
 
 			Context("when there are multiple spaces in the org", func() {
 				BeforeEach(func() {
-					helpers.CreateSpace(helpers.RandomName())
+					helpers.CreateSpace(spaceName)
 					helpers.CreateSpace(helpers.RandomName())
 					helpers.ClearTarget()
 				})
@@ -134,6 +143,19 @@ var _ = Describe("target command", func() {
 					Eventually(session.Out).Should(Say("Org:            %s", orgName))
 					Eventually(session.Out).Should(Say("Space:          No space targeted, use 'cf target -s SPACE"))
 					Eventually(session).Should(Exit(0))
+				})
+
+				Context("when another space in the org is already targetted", func() {
+					BeforeEach(func() {
+						session := helpers.CF("target", "-o", orgName, "-s", spaceName)
+						Eventually(session).Should(Exit(0))
+					})
+
+					It("untargets the targetted space", func() {
+						session := helpers.CF("target", "-o", orgName)
+						Eventually(session.Out).Should(Say("Space:          No space targeted, use 'cf target -s SPACE"))
+						Eventually(session).Should(Exit(0))
+					})
 				})
 			})
 		})
@@ -162,12 +184,13 @@ var _ = Describe("target command", func() {
 		Context("when the org exists", func() {
 			BeforeEach(func() {
 				helpers.CreateOrg(orgName)
-				helpers.TargetOrg(orgName)
 			})
 
 			Context("when the space exists", func() {
 				BeforeEach(func() {
+					helpers.TargetOrg(orgName)
 					helpers.CreateSpace(spaceName)
+					helpers.ClearTarget()
 				})
 
 				It("targets the org and exits 0", func() {

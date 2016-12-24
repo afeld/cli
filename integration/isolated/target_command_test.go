@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("target command", func() {
+var _ = FDescribe("target command", func() {
 	var (
 		orgName   string
 		spaceName string
@@ -111,7 +111,7 @@ var _ = Describe("target command", func() {
 				helpers.TargetOrg(orgName)
 			})
 
-			Context("when there is only one space one the org", func() {
+			Context("when there is only one space in the org", func() {
 				BeforeEach(func() {
 					helpers.CreateSpace(spaceName)
 					helpers.ClearTarget()
@@ -162,11 +162,21 @@ var _ = Describe("target command", func() {
 	})
 
 	Context("when a space argument is given without an org", func() {
-		It("displays org must be targetted first and exits 1", func() {
-			session := helpers.CF("target", "-s", spaceName)
-			Eventually(session.Out).Should(Say("FAILED"))
-			Eventually(session.Out).Should(Say("An org must be targeted before targeting a space"))
-			Eventually(session).Should(Exit(1))
+		Context("when org has already been set", func() {
+			Context("when space exists", func() {
+			})
+			Context("when space does not exist", func() {
+			})
+
+		})
+		Context("when org has not been set", func() {
+
+			It("displays org must be targetted first and exits 1", func() {
+				session := helpers.CF("target", "-s", spaceName)
+				Eventually(session.Out).Should(Say("FAILED"))
+				Eventually(session.Out).Should(Say("An org must be targeted before targeting a space"))
+				Eventually(session).Should(Exit(1))
+			})
 		})
 	})
 

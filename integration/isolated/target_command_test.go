@@ -163,14 +163,40 @@ var _ = FDescribe("target command", func() {
 
 	Context("when a space argument is given without an org", func() {
 		Context("when org has already been set", func() {
+			BeforeEach(func() {
+				helpers.LoginCF()
+				helpers.CreateOrg(orgName)
+				helpers.TargetOrg(orgName)
+			})
+
 			Context("when space exists", func() {
+				BeforeEach(func() {
+					helpers.CreateSpace(spaceName)
+				})
+
+				It("targets the space and exits 0", func() {
+					username, _ := helpers.GetCredentials()
+					session := helpers.CF("target", "-s", spaceName)
+					Eventually(session.Out).Should(Say(`API endpoint:   %s \(API version: [\d.]+\)`, apiURL))
+					Eventually(session.Out).Should(Say("User:           %s", username))
+					Eventually(session.Out).Should(Say("Org:            %s", orgName))
+					Eventually(session.Out).Should(Say("Space:          %s", spaceName))
+					Eventually(session).Should(Exit(0))
+				})
 			})
+
 			Context("when space does not exist", func() {
+				It("displays space not found and exits 1", func() {
+					session := helpers.CF("target", "-s", spaceName)
+					Eventually(session.Out).Should(Say("FAILED"))
+					Eventually(session.Out).Should(Say("Unable to access space %s", spaceName))
+					Eventually(session.Out).Should(Say("Space %s not found", spaceName))
+					Eventually(session).Should(Exit(1))
+				})
 			})
-
 		})
-		Context("when org has not been set", func() {
 
+		Context("when org has not been set", func() {
 			It("displays org must be targetted first and exits 1", func() {
 				session := helpers.CF("target", "-s", spaceName)
 				Eventually(session.Out).Should(Say("FAILED"))
